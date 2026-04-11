@@ -39,7 +39,7 @@
 |---------|--------------|--------------|
 | **Vault** | Store passwords, API keys, certificates | None |
 | **Registry** | Host Docker images (simple, CLI only) | None |
-| **Quay** | Enterprise container registry with scanning | PostgreSQL, Redis, Clair |
+| **PostgreSQL** | Shared database for all services | None |
 | **Gravitee** | API routing, rate limiting, auth | MongoDB, Elasticsearch |
 | **Tekton** | CI/CD pipelines (lightweight or full mode) | Kubernetes, kubectl |
 

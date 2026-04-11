@@ -14,7 +14,7 @@ show_help() {
     echo "  -h, --help     Show this help message"
     echo ""
     echo "This script starts:"
-    echo "  - Core infrastructure (Vault, Registry, Gravitee) via init.sh"
+    echo "  - Core infrastructure (Vault, PostgreSQL, Gravitee) via init.sh"
     echo "  - Tekton infrastructure (Pipelines, Dashboard)"
     echo ""
 }
@@ -42,10 +42,10 @@ STEP=1
 TOTAL_STEPS=6
 
 # Step 1: Start Docker services
-echo -e "${BLUE}[${STEP}/${TOTAL_STEPS}]${NC} Starting Docker services (Vault, Gravitee)..."
+echo -e "${BLUE}[${STEP}/${TOTAL_STEPS}]${NC} Starting Docker services (Vault, PostgreSQL, Gravitee)..."
 cd "$ROOT_DIR/orchestration"
 
-SERVICES=(vault gravitee-mongo gravitee-es gravitee-gateway gravitee-mgmt-api gravitee-mgmt-ui gravitee-portal-ui)
+SERVICES=(vault postgres gravitee-mongo gravitee-es gravitee-gateway gravitee-mgmt-api gravitee-mgmt-ui gravitee-portal-ui)
 
 # Pre-check: clean up stopped containers that have conflicting names
 for svc in "${SERVICES[@]}"; do
@@ -60,7 +60,16 @@ done
 echo ""
 
 # Now start services (stopped ones are removed, running ones will be skipped by docker-compose)
-if docker-compose up -d "${SERVICES[@]}" 2>&1 | grep -v "is already running"; then
+OUTPUT=$(docker-compose up -d "${SERVICES[@]}" 2>&1)
+if echo "$OUTPUT" | grep -q "Conflict.*container name.*already in use"; then
+    CONFLICT=$(echo "$OUTPUT" | grep -o '"/[^"]*"' | head -1 | tr -d '/')
+    echo -e "${RED}✗${NC} Container name conflict: ${CONFLICT}"
+    echo ""
+    echo -e "${YELLOW}→${NC} A container with this name already exists."
+    echo -e "   To fix: docker stop ${CONFLICT} && docker rm ${CONFLICT}"
+    echo -e "   Or use: ./commands/stop-all.sh"
+    exit 1
+elif echo "$OUTPUT" | grep -v "is already running" >/dev/null; then
     echo -e "${GREEN}✓${NC} Docker services started/verified"
 else
     echo -e "${YELLOW}→${NC} Docker services status checked"

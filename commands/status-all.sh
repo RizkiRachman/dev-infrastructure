@@ -14,7 +14,7 @@ show_help() {
     echo "  -h, --help     Show this help message"
     echo ""
     echo "This script checks status of:"
-    echo "  - Docker Compose services (Vault, Gravitee)"
+    echo "  - Docker Compose services (Vault, PostgreSQL, Gravitee)"
     echo "  - k3d cluster (includes built-in registry)"
     echo "  - Tekton infrastructure (Pipelines, Dashboard)"
     echo "  - Kubernetes cluster connection"

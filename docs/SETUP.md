@@ -44,6 +44,7 @@ cp .env.example .env
 Wait 2-3 minutes for startup. Then access:
 - http://localhost:5002 - Docker Registry (CLI only)
 - http://localhost:8201 - Vault (dev-root-token)
+- localhost:5432 - PostgreSQL (postgres/postgres)
 - http://localhost:8084 - Gravitee (admin/admin)
 
 **Start Tekton CI/CD** (requires Kubernetes + kubectl):

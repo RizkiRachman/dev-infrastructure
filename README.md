@@ -23,6 +23,7 @@ Local development stack with self-hosted CI/CD, registry, secrets, and API gatew
 |---------|---------|---------------|
 | **Registry** | Store container images (k3d managed) | http://localhost:5002 |
 | **Vault** | Manage secrets | http://localhost:8201 |
+| **PostgreSQL** | Shared database | localhost:5432 |
 | **Gravitee** | Route APIs | http://localhost:8084 |
 | **Tekton** | CI/CD infrastructure (lightweight or full) | http://localhost:8001/api/v1/namespaces/tekton-pipelines/services/tekton-dashboard:9097/proxy/ |
 
@@ -97,6 +98,7 @@ The `scripts/init.sh` script provides an interactive menu to set up the dev-infr
 |---------|-----|-------------|
 | Registry | http://localhost:5002 | (no auth required) |
 | Vault | http://localhost:8201 | dev-root-token |
+| PostgreSQL | localhost:5432 | postgres / postgres |
 | Gravitee | http://localhost:8084 | admin / admin |
 
 **Registry Management:**

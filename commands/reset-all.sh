@@ -12,12 +12,13 @@ show_help() {
     echo "Usage: ./commands/reset-all.sh [options]"
     echo ""
     echo "Options:"
-    echo "  -h, --help     Show this help message"
-    echo "  -y, --yes      Skip confirmation prompt"
+    echo "  -h, --help              Show this help message"
+    echo "  -y, --yes               Skip confirmation prompt"
+    echo "  --wipe-postgres         Delete PostgreSQL data volume (default: preserved)"
     echo ""
     echo "Deletes everything:"
-    echo "  - Tekton dashboard port-forward + all Kubernetes namespaces"
-    echo "  - Docker containers and volumes"
+    echo "  - Tekton kubectl proxy + all Kubernetes namespaces"
+    echo "  - Docker containers and volumes (postgres-data preserved by default)"
     echo "  - k3d cluster and built-in registry"
     echo ""
     echo "To just suspend (data preserved): ./commands/stop-all.sh"
@@ -28,6 +29,20 @@ if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
     show_help
     exit 0
 fi
+
+PRESERVE_POSTGRES=true
+SKIP_CONFIRM=false
+
+for arg in "$@"; do
+    case $arg in
+        --wipe-postgres)
+            PRESERVE_POSTGRES=false
+            ;;
+        -y|--yes)
+            SKIP_CONFIRM=true
+            ;;
+    esac
+done
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -107,10 +122,24 @@ echo ""
 # Step 2: Remove Docker containers and volumes
 echo -e "${BLUE}[${STEP}/${TOTAL_STEPS}]${NC} Removing Docker containers and volumes..."
 cd "$ROOT_DIR/orchestration"
-if docker-compose down -v --remove-orphans 2>&1; then
-    echo -e "${GREEN}✓${NC} Docker containers and volumes removed"
+if [ "$PRESERVE_POSTGRES" = true ]; then
+    echo -e "${GREEN}→${NC} Preserving postgres-data volume (default)"
+    # Create a backup of postgres-data before removal
+    BACKUP_DIR="$ROOT_DIR/backups/postgres"
+    mkdir -p "$BACKUP_DIR"
+    if docker run --rm -v postgres-data:/data -v "$BACKUP_DIR":/backup alpine tar czf /backup/postgres-data-backup.tar.gz -C /data . 2>/dev/null; then
+        echo -e "${GREEN}✓${NC} PostgreSQL data backed up to $BACKUP_DIR/postgres-data-backup.tar.gz"
+    fi
+    # Remove containers but keep postgres-data volume
+    docker-compose down --remove-orphans 2>&1
+    echo -e "${GREEN}✓${NC} Docker containers removed (postgres-data volume preserved)"
 else
-    echo -e "${YELLOW}→${NC} Some resources may already be removed"
+    echo -e "${YELLOW}→${NC} Wiping all volumes including postgres-data"
+    if docker-compose down -v --remove-orphans 2>&1; then
+        echo -e "${GREEN}✓${NC} Docker containers and volumes removed"
+    else
+        echo -e "${YELLOW}→${NC} Some resources may already be removed"
+    fi
 fi
 STEP=$((STEP + 1))
 echo ""

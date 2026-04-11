@@ -37,6 +37,7 @@ temp/
 data/
 volumes/
 storage/
+backups/
 
 # Certificates (except example/template files)
 *.pem

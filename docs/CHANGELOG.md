@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Shared Tekton Dashboard architecture for viewing pipelines from all namespaces
 - Environment variable-based configuration (no hardcoded values)
 - Documentation files for public repository (CONTRIBUTING.md, SECURITY.md, CODE_OF_CONDUCT.md)
+- **PostgreSQL shared database** — infrastructure creates superuser with random password, credentials pushed to Vault at `local/infrastructure/data/database`
 - **Tekton lightweight mode** (`TEKTON_LIGHTWEIGHT=true`) — Pipelines only (2 pods)
 - **Optional Dashboard** (`TEKTON_INSTALL_DASHBOARD`) — skip dashboard + proxy
 - **Optional Triggers** (`TEKTON_INSTALL_TRIGGERS`) — skip triggers when not using webhooks

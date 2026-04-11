@@ -145,10 +145,14 @@ INIT_JSON=$(curl -sf -X PUT "${VAULT_ADDR}/v1/sys/init" \
 if command -v jq &>/dev/null; then
     UNSEAL_KEY=$(echo "$INIT_JSON" | jq -r '.keys_base64[0]')
     ROOT_TOKEN=$(echo "$INIT_JSON" | jq -r '.root_token')
+    KEYS=$(echo "$INIT_JSON" | jq -r '.keys | join(",")')
+    KEYS_BASE64=$(echo "$INIT_JSON" | jq -r '.keys_base64 | join(",")')
 else
     # Fallback: grep for the first quoted string after keys_base64:[
     UNSEAL_KEY=$(echo "$INIT_JSON" | grep -o '"keys_base64":\s*\["\([^"]*\)"' | sed 's/.*"\([^"]*\)".*/\1/')
     ROOT_TOKEN=$(echo "$INIT_JSON" | grep -o '"root_token":"[^"]*"' | cut -d'"' -f4)
+    KEYS=$(echo "$INIT_JSON" | grep -o '"keys":\s*\["\([^"]*\)"' | sed 's/.*"\([^"]*\)".*/\1/')
+    KEYS_BASE64="$UNSEAL_KEY"
 fi
 
 if [ -z "$UNSEAL_KEY" ] || [ -z "$ROOT_TOKEN" ]; then
@@ -175,6 +179,17 @@ curl -sf -X PUT "${VAULT_ADDR}/v1/sys/unseal" \
 echo -e "${GREEN}✓${NC} Vault unsealed"
 
 export VAULT_TOKEN="$ROOT_TOKEN"
+
+# Store unseal keys and root token in Vault itself
+echo "   Storing Vault keys in Vault..."
+vault_post "local/infrastructure/data/vault" \
+    "{\"data\": {
+        \"keys\": \"${KEYS}\",
+        \"keys_base64\": \"${KEYS_BASE64}\",
+        \"root_token\": \"${ROOT_TOKEN}\"
+    }}" >/dev/null 2>&1 && \
+    echo -e "${GREEN}✓${NC} Keys stored in Vault: local/infrastructure/data/vault" || \
+    echo -e "${YELLOW}→${NC} Failed to store keys in Vault"
 
 # Create a well-known dev token matching .env VAULT_TOKEN so existing scripts work
 DEV_TOKEN_ID="${VAULT_DEV_ROOT_TOKEN_ID:-dev-root-token}"
