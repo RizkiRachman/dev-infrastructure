@@ -1,0 +1,63 @@
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Data volumes (if mounted locally)
+data/
+volumes/
+storage/
+
+# Certificates (except example/template files)
+*.pem
+*.key
+*.crt
+*.csr
+shared/certs/*.pem
+shared/certs/*.key
+shared/certs/*.crt
+!shared/certs/.gitkeep
+
+# Secrets
+secrets/
+*.secret
+
+# Vault unseal keys (auto-generated on first init, never commit)
+.vault-keys
+
+.claude/
+.claude-plugin/
+CLAUDE.md
+
+# PR descriptions (temporary artifacts)
+PR_DESCRIPTION.md

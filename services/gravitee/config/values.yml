@@ -1,0 +1,83 @@
+# Gravitee API Management Configuration
+# For Docker/Docker deployments
+
+# Gateway Configuration
+gateway:
+  enabled: true
+  service:
+    type: ClusterIP
+  ingress:
+    enabled: false
+  replicaCount: 1
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+  env:
+    - name: GRAVITEE_PLUGINS_PATH_0
+      value: /opt/graviteeio-gateway/plugins-ext
+
+# Management API Configuration
+api:
+  enabled: true
+  service:
+    type: ClusterIP
+  ingress:
+    enabled: false
+  replicaCount: 1
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+# Management UI Configuration
+ui:
+  enabled: true
+  service:
+    type: ClusterIP
+  ingress:
+    enabled: false
+  replicaCount: 1
+
+# Portal UI Configuration
+portal:
+  enabled: true
+  service:
+    type: ClusterIP
+  ingress:
+    enabled: false
+  replicaCount: 1
+
+# MongoDB Configuration
+mongo:
+  enabled: false  # Using external MongoDB
+  # Port must match GRAVITEE_MONGO_PORT in .env (default 27017)
+  uri: mongodb://gravitee-mongo:27017/gravitee
+
+# Elasticsearch Configuration
+elasticsearch:
+  enabled: false  # Using external Elasticsearch
+  # Port must match GRAVITEE_ES_PORT in .env (default 9200)
+  endpoints:
+    - http://gravitee-es:9200
+
+# SMTP Configuration (disabled for dev)
+smtp:
+  enabled: false
+
+# JWT Secret (change in production)
+jwt:
+  secret: dev-jwt-secret-change-in-production-32chars!
+  expire-after: 604800  # 7 days
+  
+# Admin user
+admin:
+  username: admin
+  password: admin
+  email: admin@localhost

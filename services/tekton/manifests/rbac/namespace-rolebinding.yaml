@@ -1,0 +1,13 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: dev-infra-admin-binding
+  namespace: ${NAMESPACE}
+subjects:
+- kind: User
+  name: ${RBAC_USER}
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: dev-infra-admin
+  apiGroup: rbac.authorization.k8s.io

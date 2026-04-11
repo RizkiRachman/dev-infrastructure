@@ -1,0 +1,15 @@
+# TriggerBinding: extracts fields from the incoming GitHub webhook payload
+# and maps them to named parameters consumed by the TriggerTemplate.
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: github-push-binding
+  namespace: ${PIPELINE_NS}
+spec:
+  params:
+    - name: repo-url
+      value: $(body.repository.clone_url)
+    - name: revision
+      value: $(body.after)
+    - name: repo-name
+      value: $(body.repository.name)

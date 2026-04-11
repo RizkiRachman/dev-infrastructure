@@ -1,0 +1,51 @@
+# RBAC for Tekton Triggers EventListener
+# The EventListener pod needs permission to create PipelineRuns.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tekton-triggers-sa
+  namespace: ${PIPELINE_NS}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: tekton-triggers-role
+  namespace: ${PIPELINE_NS}
+rules:
+  - apiGroups: ["tekton.dev"]
+    resources: ["pipelineruns", "pipelineresources", "taskruns"]
+    verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+  - apiGroups: ["triggers.tekton.dev"]
+    resources: ["eventlisteners", "triggerbindings", "triggertemplates", "triggers", "clusterinterceptors"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: tekton-triggers-rolebinding
+  namespace: ${PIPELINE_NS}
+subjects:
+  - kind: ServiceAccount
+    name: tekton-triggers-sa
+    namespace: ${PIPELINE_NS}
+roleRef:
+  kind: Role
+  name: tekton-triggers-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# Allow the triggers SA to access ClusterInterceptors (e.g. the CEL interceptor)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: tekton-triggers-${PIPELINE_NS}-cluster-binding
+subjects:
+  - kind: ServiceAccount
+    name: tekton-triggers-sa
+    namespace: ${PIPELINE_NS}
+roleRef:
+  kind: ClusterRole
+  name: tekton-triggers-eventlistener-clusterroles
+  apiGroup: rbac.authorization.k8s.io

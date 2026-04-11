@@ -1,0 +1,175 @@
+# ============================================
+# Dev Infrastructure - Docker Compose
+# Self-hosted stack with Docker rootless
+# ============================================
+
+networks:
+  dev-infra:
+    driver: bridge
+  vault-backend:
+    driver: bridge
+    internal: true
+
+volumes:
+  vault-data:
+  vault-logs:
+  gravitee-mongo:
+  gravitee-elasticsearch:
+
+services:
+  # ============================================
+  # Vault - Secrets Management
+  # ============================================
+  vault:
+    container_name: vault
+    image: docker.io/hashicorp/vault:1.15
+    restart: unless-stopped
+    cap_add:
+      - IPC_LOCK
+    ports:
+      - "${VAULT_PORT:-8201}:8201"
+    environment:
+      # Tells the vault CLI inside the container where to reach the server
+      VAULT_ADDR: "http://127.0.0.1:8201"
+    volumes:
+      - vault-data:/vault/file
+      - vault-logs:/vault/logs
+      - ../services/vault/config:/vault/config:ro
+    command: server
+    networks:
+      - dev-infra
+      - vault-backend
+    healthcheck:
+      # sealedok=true → returns 200 even when sealed, so container is "healthy"
+      # as soon as vault is running (init-vault.sh handles unseal separately)
+      test: ["CMD", "sh", "-c", "wget -qO- http://127.0.0.1:8201/v1/sys/health?sealedok=true | grep -q initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    labels:
+      - "dev.service=vault"
+      - "dev.description=HashiCorp Vault for secrets management"
+
+  # ============================================
+  # Gravitee - API Gateway
+  # ============================================
+  gravitee-mongo:
+    container_name: gravitee-mongo
+    image: docker.io/library/mongo:6-focal
+    platform: linux/arm64
+    restart: unless-stopped
+    ports:
+      - "${GRAVITEE_MONGO_PORT:-27017}:27017"
+    volumes:
+      - gravitee-mongo:/data/db
+    networks:
+      - dev-infra
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      - "dev.service=gravitee-mongo"
+
+  gravitee-es:
+    container_name: gravitee-es
+    image: docker.io/library/elasticsearch:7.17.14
+    platform: linux/amd64
+    restart: unless-stopped
+    ports:
+      - "${GRAVITEE_ES_PORT:-9200}:9200"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - bootstrap.memory_lock=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - gravitee-elasticsearch:/usr/share/elasticsearch/data
+    networks:
+      - dev-infra
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      - "dev.service=gravitee-es"
+
+  gravitee-gateway:
+    container_name: gravitee-gateway
+    image: docker.io/graviteeio/apim-gateway:4.2
+    platform: linux/amd64
+    restart: unless-stopped
+    depends_on:
+      gravitee-mongo:
+        condition: service_healthy
+      gravitee-es:
+        condition: service_healthy
+    ports:
+      - "${GRAVITEE_GATEWAY_PORT:-8082}:8082"
+    environment:
+      - gravitee_management_mongodb_uri=mongodb://gravitee-mongo:${GRAVITEE_MONGO_PORT:-27017}/gravitee?serverSelectionTimeoutMS=5000&connectTimeoutMS=5000&socketTimeoutMS=5000
+      - gravitee_ratelimit_mongodb_uri=mongodb://gravitee-mongo:${GRAVITEE_MONGO_PORT:-27017}/gravitee?serverSelectionTimeoutMS=5000&connectTimeoutMS=5000&socketTimeoutMS=5000
+      - gravitee_reporters_elasticsearch_endpoints_0=http://gravitee-es:${GRAVITEE_ES_PORT:-9200}
+    networks:
+      - dev-infra
+    labels:
+      - "dev.service=gravitee-gateway"
+
+  gravitee-mgmt-api:
+    container_name: gravitee-mgmt-api
+    image: docker.io/graviteeio/apim-management-api:4.2
+    platform: linux/amd64
+    restart: unless-stopped
+    depends_on:
+      gravitee-mongo:
+        condition: service_healthy
+      gravitee-es:
+        condition: service_healthy
+    ports:
+      - "${GRAVITEE_MGMT_API_PORT:-8083}:8083"
+    environment:
+      - gravitee_management_mongodb_uri=mongodb://gravitee-mongo:${GRAVITEE_MONGO_PORT:-27017}/gravitee?serverSelectionTimeoutMS=5000&connectTimeoutMS=5000&socketTimeoutMS=5000
+      - gravitee_ratelimit_mongodb_uri=mongodb://gravitee-mongo:${GRAVITEE_MONGO_PORT:-27017}/gravitee?serverSelectionTimeoutMS=5000&connectTimeoutMS=5000&socketTimeoutMS=5000
+      - gravitee_reporters_elasticsearch_endpoints_0=http://gravitee-es:${GRAVITEE_ES_PORT:-9200}
+      - gravitee_analytics_elasticsearch_endpoints_0=http://gravitee-es:${GRAVITEE_ES_PORT:-9200}
+      - gravitee_newsletter_enabled=false
+      - gravitee_alerts_enabled=false
+    networks:
+      - dev-infra
+    labels:
+      - "dev.service=gravitee-mgmt-api"
+
+  gravitee-mgmt-ui:
+    container_name: gravitee-mgmt-ui
+    image: docker.io/graviteeio/apim-management-ui:4.2
+    platform: linux/amd64
+    restart: unless-stopped
+    depends_on:
+      - gravitee-mgmt-api
+    ports:
+      - "${GRAVITEE_MGMT_UI_PORT:-8084}:8080"
+    environment:
+      - MGMT_API_URL=http://localhost:${GRAVITEE_MGMT_API_PORT:-8083}/management
+    networks:
+      - dev-infra
+    labels:
+      - "dev.service=gravitee-mgmt-ui"
+
+  gravitee-portal-ui:
+    container_name: gravitee-portal-ui
+    image: docker.io/graviteeio/apim-portal-ui:4.2
+    platform: linux/amd64
+    restart: unless-stopped
+    depends_on:
+      - gravitee-gateway
+    ports:
+      - "${GRAVITEE_PORTAL_UI_PORT:-8085}:8080"
+    environment:
+      - PORTAL_API_URL=http://localhost:${GRAVITEE_GATEWAY_PORT:-8082}/portal
+    networks:
+      - dev-infra
+    labels:
+      - "dev.service=gravitee-portal-ui"
+
